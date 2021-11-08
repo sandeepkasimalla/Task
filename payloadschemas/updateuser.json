@@ -1,0 +1,18 @@
+{
+    "title": "Update User",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength":1,
+        "maxLength":50
+      },
+      "email": {
+          "format": "email"
+      },
+      "contactnumber": {
+          "type": "string",
+          "pattern": "^[0-9]{10}$"
+      }
+    }
+  }
