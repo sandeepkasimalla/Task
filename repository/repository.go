@@ -82,36 +82,31 @@ func (dr *UsersRepo) FindAndUpdate(id string, document map[string]interface{}) (
 }
 
 //FindByFiltersAndPagenation will find the document by filters and pagenation and returns the data
-func (dr *UsersRepo) FindByFiltersAndPagenation(page int64, size int64, filters map[string]interface{}, sort map[string]interface{}) ([]map[string]interface{}, int64, error) {
+func (dr *UsersRepo) FindByFiltersAndPagenation(page int64, size int64, filters map[string]interface{}, sort map[string]interface{}) ([]map[string]interface{}, int, error) {
 
 	options := *options.Find()
 
 	collection := dr.DbClient.Database(dr.DatabaseName).Collection("users")
 	var result []map[string]interface{}
 
-	total, err := collection.CountDocuments(context.TODO(), filters)
-	if err != nil {
-		openlog.Error(err.Error())
-		return result, total, errors.New("Internal Server Error")
-	}
 	cursor, err := collection.Find(context.TODO(), filters, options.SetLimit(size), options.SetSkip((page-1)*size), options.SetSort(sort))
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return result, total, nil
+			return result, 0, nil
 		}
 		openlog.Error(err.Error())
-		return result, total, errors.New("Internal Server Error")
+		return result, 500, errors.New("Internal Server Error")
 	}
 	for cursor.Next(context.TODO()) {
 		var doc map[string]interface{}
 		err := cursor.Decode(&doc)
 		if err != nil {
 			openlog.Error(err.Error())
-			return result, total, errors.New("Internal Server Error")
+			return result, 500, errors.New("Internal Server Error")
 		}
 		result = append(result, doc)
 	}
-	return result, total, nil
+	return result, 0, nil
 }
 
 //FindByFilters will find the document by filters and pagenation and returns the data

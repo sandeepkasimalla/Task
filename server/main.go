@@ -4,17 +4,19 @@ import (
 	"log"
 	"net/http"
 
+	"Task/handlers"
+
 	"github.com/go-chassis/openlog"
 	"github.com/gorilla/mux"
 
 	"Task/database"
-	"Task/handlers"
 	"Task/repository"
+	"Task/service"
 )
 
-func GetHandler(dbname string) *handlers.Handler {
+func GetService(dbname string) service.Service {
 	repo := repository.UsersRepo{DbClient: database.GetClient(), DatabaseName: dbname}
-	return &handlers.Handler{Repo: repo}
+	return service.Service{Repo: repo}
 }
 func main() {
 
@@ -24,7 +26,8 @@ func main() {
 		openlog.Error(err.Error())
 		return
 	}
-	h := GetHandler("Users")
+	service := GetService("Users")
+	h := handlers.Handler{Service: service}
 	r.HandleFunc("/users/{id}", h.GetUser).Methods("GET")
 	r.HandleFunc("/users", h.CreateUser).Methods("POST")
 	r.HandleFunc("/users/{id}", h.UpdateUser).Methods("PUT")

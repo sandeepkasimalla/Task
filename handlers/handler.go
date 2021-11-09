@@ -1,10 +1,10 @@
 package handlers
 
 import (
+	"Task/common"
 	validator "Task/payloadvalidator"
-	"Task/repository"
+	"Task/service"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chassis/openlog"
@@ -12,7 +12,7 @@ import (
 )
 
 type Handler struct {
-	Repo repository.UsersRepo
+	Service service.Service
 }
 
 type Response struct {
@@ -34,23 +34,10 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	email := user["email"].(string)
-	code, err := h.Repo.IsEmailExists(email)
-	fmt.Println(err, " ++++++++++++++++++++++++++++++++++")
-	if err != nil {
-		openlog.Error(err.Error())
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	res, code, err := h.Repo.Insert(user)
-	if err != nil {
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	response := Response{Msg: "User inserted successfully", Data: res, Status: 201}
-	json.NewEncoder(w).Encode(response)
+	input := common.CreateUserInput{User: user}
+	res := h.Service.CreateUser(input)
+	w.WriteHeader(res.Status)
+	json.NewEncoder(w).Encode(res)
 }
 
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -59,54 +46,35 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var params = mux.Vars(r)
 	id := params["id"]
-	res, code, err := h.Repo.Find(id)
-	if err != nil {
-		openlog.Error(err.Error())
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	response := Response{Msg: "User Fetched successfully", Data: res, Status: 200}
-	json.NewEncoder(w).Encode(response)
+	input := common.FetchUserInput{ID: id}
+	res := h.Service.GetUser(input)
+	w.WriteHeader(res.Status)
+	json.NewEncoder(w).Encode(res)
 }
 
+// FetchAllDatamodelsByPagenation function will helps to get the field by considering page number, size and filters.
 func (h *Handler) FetchAllUsers(w http.ResponseWriter, r *http.Request) {
-	openlog.Info("Got a request to fetch User")
-	// set header.
-	w.Header().Set("Content-Type", "application/json")
+	page := r.URL.Query().Get("page")
+	size := r.URL.Query().Get("size")
 	filters := r.URL.Query().Get("filters")
-
-	var filter = make(map[string]interface{})
-	if filters != "" {
-		bytes := []byte(filters)
-		json.Unmarshal(bytes, &filter)
-	}
-	res, code, err := h.Repo.FindByFilters(filter, nil)
-	if err != nil {
-		openlog.Error(err.Error())
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	response := Response{Msg: "User Fetched successfully", Data: res, Status: 200}
-	json.NewEncoder(w).Encode(response)
+	sort := r.URL.Query().Get("sort")
+	input := common.FetchAllUsersInput{Page: page, Size: size, Filters: filters, Sort: sort}
+	w.Header().Set("Content-Type", "application/json")
+	res := h.Service.FetchAllUsers(input)
+	w.WriteHeader(res.Status)
+	json.NewEncoder(w).Encode(res)
 }
+
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	openlog.Info("Got a request to Delete User")
 	// set header.
 	w.Header().Set("Content-Type", "application/json")
 	var params = mux.Vars(r)
 	id := params["id"]
-	res, code, err := h.Repo.Delete(id)
-	if err != nil {
-		openlog.Error(err.Error())
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	response := Response{Msg: "User deleted successfully", Data: res, Status: 200}
-	json.NewEncoder(w).Encode(response)
+	input := common.DeleteUserInput{ID: id}
+	res := h.Service.DeleteUser(input)
+	w.WriteHeader(res.Status)
+	json.NewEncoder(w).Encode(res)
 }
 
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -124,30 +92,8 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	res, code, err := h.Repo.Find(id)
-	if err != nil {
-		openlog.Error(err.Error())
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	email, ok := user["email"].(string)
-	if ok {
-		code, err = h.Repo.IsEmailExists(email)
-		if err != nil {
-			openlog.Error(err.Error())
-			response := Response{Msg: err.Error(), Data: nil, Status: code}
-			json.NewEncoder(w).Encode(response)
-			return
-		}
-	}
-	res, code, err = h.Repo.FindAndUpdate(id, user)
-	if err != nil {
-		openlog.Error(err.Error())
-		response := Response{Msg: err.Error(), Data: nil, Status: code}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	response := Response{Msg: "User Updated successfully", Data: res, Status: 201}
-	json.NewEncoder(w).Encode(response)
+	input := common.UpdateUserInput{ID: id, User: user}
+	res := h.Service.UpdateUser(input)
+	w.WriteHeader(res.Status)
+	json.NewEncoder(w).Encode(res)
 }
